@@ -3,17 +3,10 @@ import { useParams } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import type { Shipment, ShipmentEvent } from "@/types/shipment"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
 import { useState } from "react"
 import { useAuth } from "@/lib/useAuth"
 
-import { Button } from "@/components/ui/button"
-
-
 async function fetchShipmentWithEvents(id: string) {
-    // const { user } = useAuth()
-    // const [uploading, setUploading] = useState(false)
-
   const [{ data: shipment, error: shipmentError }, { data: events, error: eventsError }] =
     await Promise.all([
       supabase.from("shipments").select("*").eq("id", id).single(),
@@ -32,12 +25,35 @@ async function fetchShipmentWithEvents(id: string) {
 
 export function ShipmentDetail() {
   const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
+  const [uploading, setUploading] = useState(false)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["shipment", id],
     queryFn: () => fetchShipmentWithEvents(id!),
     enabled: !!id,
   })
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !user || !data?.shipment) return
+
+    setUploading(true)
+    const filePath = `${user.id}/${data.shipment.id}/${file.name}`
+
+    const { error: uploadError } = await supabase.storage
+      .from("documents")
+      .upload(filePath, file)
+
+    if (!uploadError) {
+      await supabase.from("documents").insert({
+        shipment_id: data.shipment.id,
+        file_path: filePath,
+      })
+    }
+
+    setUploading(false)
+  }
 
   if (isLoading) return <p>Loading shipment...</p>
   if (error || !data) return <p className="text-red-500">Failed to load shipment.</p>
@@ -55,6 +71,11 @@ export function ShipmentDetail() {
           <p>{shipment.origin} → {shipment.destination}</p>
         </CardContent>
       </Card>
+
+      <div>
+        <input type="file" onChange={handleUpload} disabled={uploading} />
+        {uploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
+      </div>
 
       <div>
         <h2 className="text-lg font-medium mb-2">Timeline</h2>
@@ -75,34 +96,4 @@ export function ShipmentDetail() {
       </div>
     </div>
   )
-
-
-
-    async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !user || !shipment) return
-
-    setUploading(true)
-    const filePath = `${user.id}/${shipment.id}/${file.name}`
-
-    const { error: uploadError } = await supabase.storage
-        .from("documents")
-        .upload(filePath, file)
-
-    if (!uploadError) {
-        await supabase.from("documents").insert({
-        shipment_id: shipment.id,
-        file_path: filePath,
-        })
-    }
-
-    setUploading(false)
-    }
-
-    // ...in the JSX, add near the Card:
-    <div>
-    <input type="file" onChange={handleUpload} disabled={uploading} />
-    {uploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
-</div>
 }
-
