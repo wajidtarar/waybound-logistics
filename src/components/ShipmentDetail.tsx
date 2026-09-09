@@ -5,32 +5,14 @@ import type { Shipment, ShipmentEvent } from "@/types/shipment"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react"
 import { useAuth } from "@/lib/useAuth"
-
 import { extractDocument } from "@/lib/extractDocument"
 import type { ExtractedData } from "@/lib/extractionSchema"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-// ...inside ShipmentDetail component:
-
-const [extracting, setExtracting] = useState(false)
-const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
-const [extractError, setExtractError] = useState<string | null>(null)
-
-async function handleExtract(documentId: string) {
-  setExtracting(true)
-  setExtractError(null)
-  try {
-    const result = await extractDocument(documentId)
-    setExtractedData(result)
-  } catch (err) {
-    setExtractError((err as Error).message)
-  } finally {
-    setExtracting(false)
-  }
-}
-
 async function fetchShipmentWithEvents(id: string) {
+
+  
   const [{ data: shipment, error: shipmentError }, { data: events, error: eventsError }] =
     await Promise.all([
       supabase.from("shipments").select("*").eq("id", id).single(),
@@ -51,6 +33,12 @@ export function ShipmentDetail() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const [uploading, setUploading] = useState(false)
+  const [latestDocumentId, setLatestDocumentId] = useState<string | null>(null)
+  console.log("latestDocumentId:", latestDocumentId)
+
+  const [extracting, setExtracting] = useState(false)
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
+  const [extractError, setExtractError] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["shipment", id],
@@ -70,13 +58,34 @@ export function ShipmentDetail() {
       .upload(filePath, file)
 
     if (!uploadError) {
-      await supabase.from("documents").insert({
-        shipment_id: data.shipment.id,
-        file_path: filePath,
-      })
+      const { data: insertedDoc, error: insertError } = await supabase
+        .from("documents")
+        .insert({
+          shipment_id: data.shipment.id,
+          file_path: filePath,
+        })
+        .select()
+        .single()
+
+      if (!insertError && insertedDoc) {
+        setLatestDocumentId(insertedDoc.id)
+      }
     }
 
     setUploading(false)
+  }
+
+  async function handleExtract(documentId: string) {
+    setExtracting(true)
+    setExtractError(null)
+    try {
+      const result = await extractDocument(documentId)
+      setExtractedData(result)
+    } catch (err) {
+      setExtractError((err as Error).message)
+    } finally {
+      setExtracting(false)
+    }
   }
 
   if (isLoading) return <p>Loading shipment...</p>
@@ -101,10 +110,11 @@ export function ShipmentDetail() {
         {uploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
       </div>
 
-
-      <Button onClick={() => handleExtract(latestDocumentId)} disabled={extracting}>
-        {extracting ? "Extracting..." : "Extract Data"}
-      </Button>
+      {latestDocumentId && (
+        <Button onClick={() => handleExtract(latestDocumentId)} disabled={extracting}>
+          {extracting ? "Extracting..." : "Extract Data"}
+        </Button>
+      )}
 
       {extractError && <p className="text-sm text-red-500">{extractError}</p>}
 
@@ -122,12 +132,13 @@ export function ShipmentDetail() {
           <p>Reference #: {extractedData.referenceNumber ?? "—"}</p>
           <p>Weight: {extractedData.weight ? `${extractedData.weight} ${extractedData.weightUnit ?? ""}` : "—"}</p>
           <p>Amount: {extractedData.totalAmount ? `${extractedData.totalAmount} ${extractedData.currency ?? ""}` : "—"}</p>
+          <p>Ship Date: {extractedData.shipDate ? new Date(extractedData.shipDate).toLocaleDateString() : "—"}</p>
+          <p>ETA: {extractedData.eta ? new Date(extractedData.eta).toLocaleDateString() : "—"}</p>
           {extractedData.confidence < 0.7 && (
             <p className="text-sm text-amber-600">Low confidence — please verify these fields manually.</p>
           )}
         </div>
       )}
-
 
       <div>
         <h2 className="text-lg font-medium mb-2">Timeline</h2>

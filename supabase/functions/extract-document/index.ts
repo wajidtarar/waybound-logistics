@@ -39,22 +39,29 @@ const RESPONSE_SCHEMA = {
   required: ["documentType", "confidence"],
 }
 
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders })
 
   try {
-    const { documentId } = await req.json()
+    const body = await req.json()
+    console.log("Full request body:", body)
+    const { documentId } = body
+    console.log("documentId received:", documentId, typeof documentId)
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // 1. Look up the document row to find its storage path
     const { data: document, error: docError } = await supabase
       .from("documents")
       .select("*")
       .eq("id", documentId)
       .single()
 
-    if (docError || !document) throw new Error("Document not found")
+    console.log("Query result — document:", document, "error:", docError)
+
+    if (docError || !document) {
+      throw new Error("Document not found")
+    }
 
     // 2. Download the file from Storage
     const { data: fileBlob, error: downloadError } = await supabase.storage
@@ -68,8 +75,12 @@ Deno.serve(async (req) => {
     const mimeType = fileBlob.type || "application/pdf"
 
     // 3. Call Gemini with the file + extraction instructions
+
+    
+
+
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,9 +88,7 @@ Deno.serve(async (req) => {
           contents: [
             {
               parts: [
-                {
-                  text: "You are extracting structured data from a logistics document (invoice, bill of lading, or packing list). Return only the fields you can find; use null for anything missing. Set 'confidence' to your honest certainty (0 to 1) about the overall extraction quality.",
-                },
+                { text: "You are extracting structured data..." },
                 { inlineData: { mimeType, data: base64File } },
               ],
             },
@@ -92,10 +101,15 @@ Deno.serve(async (req) => {
       },
     )
 
-    const geminiResult = await geminiResponse.json()
-    const rawJson = geminiResult.candidates?.[0]?.content?.parts?.[0]?.text
+    console.log("Gemini HTTP status:", geminiResponse.status)
 
+    const geminiResult = await geminiResponse.json()
+    console.log("Gemini full response:", JSON.stringify(geminiResult))
+
+    const rawJson = geminiResult.candidates?.[0]?.content?.parts?.[0]?.text
     if (!rawJson) throw new Error("Gemini returned no extractable content")
+
+
 
     const extracted = JSON.parse(rawJson)
 
