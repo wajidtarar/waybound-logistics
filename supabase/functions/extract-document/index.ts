@@ -49,6 +49,11 @@ Deno.serve(async (req) => {
     const { documentId } = body
     console.log("documentId received:", documentId, typeof documentId)
 
+    // TODO(security): using service role key bypasses RLS — this function does
+// not yet verify the calling user owns the document. Deferred to Phase 9.
+// Fix: swap to SUPABASE_ANON_KEY + forwarded Authorization header (see
+// Phase 4 guide for the ready-to-use version).
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     const { data: document, error: docError } = await supabase
