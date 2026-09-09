@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button"
 
 
 async function fetchShipmentWithEvents(id: string) {
-    const { user } = useAuth()
-    const [uploading, setUploading] = useState(false)
+    // const { user } = useAuth()
+    // const [uploading, setUploading] = useState(false)
 
   const [{ data: shipment, error: shipmentError }, { data: events, error: eventsError }] =
     await Promise.all([

@@ -7,7 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 
+import { useNavigate } from "react-router-dom"
+
 export function SignUpForm() {
+
+      const navigate = useNavigate()
+
   const [serverError, setServerError] = useState<string | null>(null)
   const {
     register,
@@ -15,14 +20,24 @@ export function SignUpForm() {
     formState: { errors, isSubmitting },
   } = useForm<SignUpFormValues>({ resolver: zodResolver(signUpSchema) })
 
-  async function onSubmit(values: SignUpFormValues) {
+    async function onSubmit(values: SignUpFormValues) {
     setServerError(null)
-    const { error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
+    const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
     })
-    if (error) setServerError(error.message)
-  }
+    if (error) {
+        setServerError(error.message)
+        return
+    }
+    if (data.session) {
+        // Email confirmation is off — session exists immediately
+        navigate("/")
+    } else {
+        // Email confirmation is on — no session yet
+        setServerError("Check your inbox to confirm your email before logging in.")
+    }
+    }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-sm">

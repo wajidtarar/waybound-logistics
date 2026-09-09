@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useNavigate } from "react-router-dom"
 import { loginSchema, type LoginFormValues } from "@/lib/authSchemas"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
@@ -7,7 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 
+
 export function LoginForm() {
+  const navigate = useNavigate()
   const [serverError, setServerError] = useState<string | null>(null)
   const {
     register,
@@ -21,7 +24,11 @@ export function LoginForm() {
       email: values.email,
       password: values.password,
     })
-    if (error) setServerError(error.message)
+    if (error) {
+      setServerError(error.message)
+      return
+    }
+    navigate("/")
   }
 
   return (
