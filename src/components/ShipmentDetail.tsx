@@ -6,6 +6,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react"
 import { useAuth } from "@/lib/useAuth"
 
+import { extractDocument } from "@/lib/extractDocument"
+import type { ExtractedData } from "@/lib/extractionSchema"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+
+// ...inside ShipmentDetail component:
+
+const [extracting, setExtracting] = useState(false)
+const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
+const [extractError, setExtractError] = useState<string | null>(null)
+
+async function handleExtract(documentId: string) {
+  setExtracting(true)
+  setExtractError(null)
+  try {
+    const result = await extractDocument(documentId)
+    setExtractedData(result)
+  } catch (err) {
+    setExtractError((err as Error).message)
+  } finally {
+    setExtracting(false)
+  }
+}
+
 async function fetchShipmentWithEvents(id: string) {
   const [{ data: shipment, error: shipmentError }, { data: events, error: eventsError }] =
     await Promise.all([
@@ -76,6 +100,34 @@ export function ShipmentDetail() {
         <input type="file" onChange={handleUpload} disabled={uploading} />
         {uploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
       </div>
+
+
+      <Button onClick={() => handleExtract(latestDocumentId)} disabled={extracting}>
+        {extracting ? "Extracting..." : "Extract Data"}
+      </Button>
+
+      {extractError && <p className="text-sm text-red-500">{extractError}</p>}
+
+      {extractedData && (
+        <div className="border rounded-lg p-4 space-y-2 mt-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-medium">Extracted Data</h3>
+            <Badge variant={extractedData.confidence < 0.7 ? "destructive" : "outline"}>
+              Confidence: {Math.round(extractedData.confidence * 100)}%
+            </Badge>
+          </div>
+          <p>Type: {extractedData.documentType}</p>
+          <p>Shipper: {extractedData.shipper ?? "—"}</p>
+          <p>Consignee: {extractedData.consignee ?? "—"}</p>
+          <p>Reference #: {extractedData.referenceNumber ?? "—"}</p>
+          <p>Weight: {extractedData.weight ? `${extractedData.weight} ${extractedData.weightUnit ?? ""}` : "—"}</p>
+          <p>Amount: {extractedData.totalAmount ? `${extractedData.totalAmount} ${extractedData.currency ?? ""}` : "—"}</p>
+          {extractedData.confidence < 0.7 && (
+            <p className="text-sm text-amber-600">Low confidence — please verify these fields manually.</p>
+          )}
+        </div>
+      )}
+
 
       <div>
         <h2 className="text-lg font-medium mb-2">Timeline</h2>
