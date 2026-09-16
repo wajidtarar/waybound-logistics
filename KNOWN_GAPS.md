@@ -22,3 +22,9 @@
 
 
   this callback uses state to identify the user, but doesn't cryptographically verify it — a properly hardened OAuth flow signs/verifies the state parameter to prevent tampering.
+
+
+  - **OAuth `state` parameter is not cryptographically signed/verified** in
+  `gmail-oauth-callback` — acceptable for a demo scope (Testing mode, single
+  test user), but a production version would need to sign/verify `state` to
+  prevent tampering.
