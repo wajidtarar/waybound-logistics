@@ -19,3 +19,6 @@
 
 
   with an "Extract" button next to each one individually — rather than only ever tracking "the latest." Worth a line in KNOWN_GAPS.md alongside the RLS one if you want to keep that file as your running list of deliberate simplifications.
+
+
+  this callback uses state to identify the user, but doesn't cryptographically verify it — a properly hardened OAuth flow signs/verifies the state parameter to prevent tampering.

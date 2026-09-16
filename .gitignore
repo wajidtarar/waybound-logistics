@@ -27,3 +27,4 @@ dist-ssr
 # supabase temp files
 
 supabase/.temp/
+google1.json

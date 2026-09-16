@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/useAuth"
+import { connectGmail } from "@/lib/gmailAuth.ts"
 import type { Shipment } from "@/types/shipment"
 import {
   Table,
@@ -12,6 +13,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+
+import { InboxScan } from "@/components/InboxScan"
+
 
 async function fetchShipments(userId: string): Promise<Shipment[]> {
   const { data, error } = await supabase
@@ -39,6 +44,8 @@ export function ShipmentList() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Shipments</h1>
+      <Button onClick={() => connectGmail(user!.id)}>Connect Gmail</Button>
+      <InboxScan />
       <Table>
         <TableHeader>
           <TableRow>
