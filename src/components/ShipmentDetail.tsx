@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import type { Shipment, ShipmentEvent } from "@/types/shipment"
@@ -45,6 +45,45 @@ export function ShipmentDetail() {
     queryFn: () => fetchShipmentWithEvents(id!),
     enabled: !!id,
   })
+
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  async function handleRegisterTracking() {
+    if (!data?.shipment) return
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const { data: result, error } = await supabase.functions.invoke("register-tracking", {
+        body: { shipmentId: data.shipment.id },
+      })
+      if (error) throw error
+      setSyncMessage("Tracking registered — click Sync in a few minutes to pull the first update.")
+    } catch (err) {
+      setSyncMessage(`Registration failed: ${(err as Error).message}`)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  async function handleSyncTracking() {
+    if (!data?.shipment) return
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      const { data: result, error } = await supabase.functions.invoke("sync-tracking", {
+        body: { shipmentId: data.shipment.id },
+      })
+      if (error) throw error
+      setSyncMessage(`Synced — ${result.insertedCount} new event(s) found.`)
+      queryClient.invalidateQueries({ queryKey: ["shipment", id] }) // refetch so the timeline updates
+    } catch (err) {
+      setSyncMessage(`Sync failed: ${(err as Error).message}`)
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -95,6 +134,19 @@ export function ShipmentDetail() {
 
   return (
     <div className="p-6 space-y-6">
+
+
+
+      <div className="flex gap-2">
+        <Button onClick={handleRegisterTracking} disabled={syncing} variant="outline">
+          Register Tracking
+        </Button>
+        <Button onClick={handleSyncTracking} disabled={syncing}>
+          {syncing ? "Syncing..." : "Sync Tracking"}
+        </Button>
+      </div>
+      {syncMessage && <p className="text-sm text-muted-foreground">{syncMessage}</p>}
+      
       <Card>
         <CardHeader>
           <CardTitle>{shipment.tracking_number ?? "Untitled shipment"}</CardTitle>

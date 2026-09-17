@@ -28,3 +28,7 @@
   `gmail-oauth-callback` — acceptable for a demo scope (Testing mode, single
   test user), but a production version would need to sign/verify `state` to
   prevent tampering.
+
+  - **Best-effort duplicate check.**
+
+  updated with the service-role usage (same pattern as before) and the "best-effort duplicate check" simplification

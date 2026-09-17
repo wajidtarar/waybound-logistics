@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
 
     // TODO(security): service role key bypasses RLS — same deferred
     // hardening as extract-document, tracked in KNOWN_GAPS.md.
-    const supabase =  (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    const supabase =  createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     const { data: shipment, error: shipmentError } = await supabase
       .from("shipments")
