@@ -29,6 +29,9 @@
   test user), but a production version would need to sign/verify `state` to
   prevent tampering.
 
-  - **Best-effort duplicate check.**
-
-  updated with the service-role usage (same pattern as before) and the "best-effort duplicate check" simplification
+  
+  - **register-tracking / sync-tracking use the service role key**, same
+  deferred-hardening pattern as extract-document. Verified working correctly
+  against 17Track's sandbox number 111111 with accurate event normalization
+  and duplicate prevention (confirmed: 21 events synced once, 0 duplicates
+  on re-sync).
