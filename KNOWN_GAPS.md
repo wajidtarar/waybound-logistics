@@ -35,3 +35,9 @@
   against 17Track's sandbox number 111111 with accurate event normalization
   and duplicate prevention (confirmed: 21 events synced once, 0 duplicates
   on re-sync).
+
+
+  - **Alert emails use Resend's shared test sender** (`onboarding@resend.dev`),
+  which on the free plan only delivers to the Resend account owner's own
+  address. A real deployment would verify a custom sending domain so alerts
+  can reach any user's email.
